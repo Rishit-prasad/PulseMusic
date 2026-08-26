@@ -1,6 +1,5 @@
 package com.maxrave.simpmusic.ui.component
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -13,6 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,6 +34,14 @@ import com.maxrave.simpmusic.ui.theme.typo
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import simpmusic.composeapp.generated.resources.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.reflect.KClass
 
 /**
@@ -114,10 +122,11 @@ fun AppBottomNavigationBar(
     // The translucent switch tints the CAPSULE ITSELF, never a strip behind it — the area around
     // the floating cluster always shows the page. ON reads the content through the pill; OFF is a
     // solid surface. The indicator stays nearer opaque so the selection survives busy artwork.
-    val capsuleColor =
-        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = if (isTranslucentBackground) 0.72f else 1f)
-    val indicatorColor =
-        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = if (isTranslucentBackground) 0.85f else 1f)
+    val capsuleBg = Color.Black.copy(alpha = 0.85f)
+    val capsuleBorder = Color.White.copy(alpha = 0.08f)
+    val indicatorGlow = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+    val activeColor = MaterialTheme.colorScheme.primary
+    val inactiveColor = Color.White.copy(alpha = 0.45f)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -135,16 +144,22 @@ fun AppBottomNavigationBar(
         BoxWithConstraints(Modifier.weight(1f, fill = false)) {
             // Every tab the same width, capped so two tabs on a wide screen do not stretch into
             // slabs — the same budget rule as the glass tab bar.
-            val tabWidth = ((maxWidth - CapsuleInset * 2) / barTabs.size).coerceAtMost(FlatTabWidth)
+            val tabWidth = ((maxWidth - PULSE_CAPSULE_INSET * 2) / barTabs.size).coerceAtMost(PULSE_TAB_WIDTH)
             val selectedPosition = barTabs.indexOfFirst { it.ordinal == selectedIndex }
-            val indicatorOffset by animateDpAsState(tabWidth * selectedPosition.coerceAtLeast(0), label = "flatBarIndicator")
+            val indicatorOffset = remember { Animatable(0f) }
+            LaunchedEffect(selectedPosition, tabWidth) {
+                if (selectedPosition >= 0) {
+                    indicatorOffset.animateTo(targetValue = (tabWidth * selectedPosition).value, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                }
+            }
             Box(
                 modifier =
                     Modifier
-                        .height(FlatBarHeight)
-                        .clip(RoundedCornerShape(FlatBarHeight / 2))
-                        .background(capsuleColor)
-                        .padding(horizontal = CapsuleInset),
+                        .height(PULSE_BAR_HEIGHT)
+                        .clip(RoundedCornerShape(PULSE_BAR_HEIGHT / 2))
+                        .background(capsuleBg)
+                        .border(1.dp, capsuleBorder, RoundedCornerShape(PULSE_BAR_HEIGHT / 2))
+                        .padding(horizontal = PULSE_CAPSULE_INSET),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 // The sliding indicator — the flat stand-in for the glass bar's frosted blob. Hidden
@@ -153,10 +168,11 @@ fun AppBottomNavigationBar(
                     Box(
                         modifier =
                             Modifier
-                                .offset(x = indicatorOffset)
-                                .size(width = tabWidth, height = FlatIndicatorHeight)
-                                .clip(RoundedCornerShape(FlatIndicatorHeight / 2))
-                                .background(indicatorColor),
+                                .offset(x = indicatorOffset.value.dp)
+                                .size(width = tabWidth, height = PULSE_INDICATOR_HEIGHT)
+                                .shadow(10.dp, RoundedCornerShape(PULSE_INDICATOR_HEIGHT / 2), ambientColor = indicatorGlow, spotColor = indicatorGlow)
+                                .clip(RoundedCornerShape(PULSE_INDICATOR_HEIGHT / 2))
+                                .background(Brush.horizontalGradient(listOf(activeColor, activeColor.copy(alpha = 0.75f)))),
                     )
                 }
                 Row {
@@ -173,13 +189,18 @@ fun AppBottomNavigationBar(
                                 Modifier
                                     .width(tabWidth)
                                     .fillMaxHeight()
-                                    .clip(RoundedCornerShape(FlatIndicatorHeight / 2))
+                                    .clip(RoundedCornerShape(PULSE_INDICATOR_HEIGHT / 2))
                                     .clickable { selectTab(screen) },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
+                            val iconScale = remember { Animatable(1f) }
+                            LaunchedEffect(selected) {
+                                if (selected) iconScale.animateTo(1.15f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+                                else iconScale.animateTo(1f)
+                            }
                             CompositionLocalProvider(LocalContentColor provides contentColor) {
-                                screen.icon()
+                                Box(modifier = Modifier.graphicsLayer { scaleX = iconScale.value; scaleY = iconScale.value }) { screen.icon() }
                             }
                             Text(
                                 stringResource(screen.title),
@@ -197,19 +218,14 @@ fun AppBottomNavigationBar(
         Box(
             modifier =
                 Modifier
-                    .size(FlatIndicatorHeight)
+                    .size(PULSE_INDICATOR_HEIGHT)
                     .clip(CircleShape)
-                    .background(if (searchSelected) indicatorColor else capsuleColor)
+                    .background(if (searchSelected) indicatorGlow else capsuleBg)
                     .clickable { selectTab(BottomNavScreen.Search) },
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(
-                LocalContentColor provides
-                    if (searchSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                LocalContentColor provides if (searchSelected) Color.White else inactiveColor,
             ) {
                 BottomNavScreen.Search.icon()
             }
@@ -219,10 +235,10 @@ fun AppBottomNavigationBar(
 
 // Mirrors the glass tab bar's geometry (TabWidth/BarHeight/BlobHeight/BarInset in
 // LiquidGlassTabBar.android.kt) so the two bars are one form in two materials.
-private val FlatTabWidth = 96.dp
-private val FlatBarHeight = 64.dp
-private val FlatIndicatorHeight = 56.dp
-private val CapsuleInset = 6.dp
+private val PULSE_TAB_WIDTH = 96.dp
+private val PULSE_BAR_HEIGHT = 64.dp
+private val PULSE_INDICATOR_HEIGHT = 56.dp
+private val PULSE_CAPSULE_INSET = 6.dp
 
 @Composable
 fun AppNavigationRail(
