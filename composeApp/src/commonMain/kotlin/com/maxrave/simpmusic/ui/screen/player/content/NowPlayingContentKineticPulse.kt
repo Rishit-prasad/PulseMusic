@@ -1,9 +1,12 @@
 package com.maxrave.simpmusic.ui.screen.player.content
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -26,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -100,9 +104,9 @@ import kotlin.math.roundToLong
  * content column at 560dp and centre it.
  */
 
-// Near-black with a violet undertone rather than #000: pure black reads as a hole against the
-// glow (same reasoning as [PlayerBackdropColor], but darker to give the accent more contrast).
-private val KineticBackdrop = Color(0xFF0A0A12)
+// Pure black — the simplest, cleanest backdrop. The bottom is solid black; the artwork
+// sits above it with a gradient bleed; no tint needed.
+private val KineticBackdrop = Color.Black
 
 // Waveform resolution. A fixed count keeps geometry predictable across widths; each bar's
 // height comes from a deterministic per-track PRNG, so the shape survives seeks,
@@ -147,17 +151,11 @@ fun NowPlayingContentKineticPulse(
                     )
                 },
     ) {
-        // The artwork fills the full screen behind everything else, matching Apple Music's
-        // Z-stack approach. The controls and track info are anchored to the bottom via
-        // Alignment.BottomCenter, so they can NEVER be pushed off-screen regardless of
-        // phone height or safe insets.
+        // Layout: the outer Box is pure black. The artwork is a centred card in the top
+        // portion with a soft gradient bleed into the black bottom. Controls sit at the
+        // bottom on solid black — never hidden, never clipped.
 
-        // 1. Artwork layer — full-screen pager with rounded corners on the image itself.
-        Box(modifier = Modifier.fillMaxSize()) {
-            PulseArtworkPager(state = state, actions = actions)
-        }
-
-        // 2. Top bar — anchored at the top.
+        // 1. Top bar — anchored at the top.
         Box(
             modifier =
                 Modifier
@@ -167,35 +165,38 @@ fun NowPlayingContentKineticPulse(
             PulseTopBar(state = state, actions = actions)
         }
 
-        // 3. Bottom content — track info + inline lyric + controls, always at screen bottom.
-        // A vertical scrim ensures text is readable over any artwork.
-        // NOTE: we intentionally ignore controlLayoutAlpha here — Kinetic Pulse always shows
-        // its controls. The shell's canvas auto-hide timer is meant for Spotify/Classic where
-        // controls overlay a small artwork; in our full-bleed design the scrim already handles
-        // contrast, so hiding controls just leaves an empty screen.
+        // 2. Artwork — centred card, max 320dp wide, aspect 1:1, in the upper portion.
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.safeDrawing),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            // Solid dark background behind the entire bottom half — prevents artwork
-            // from bleeding through below the controls.
-            Box(
+            PulseArtworkPager(
+                state = state,
+                actions = actions,
                 modifier =
                     Modifier
+                        .padding(top = 56.dp) // below top bar
+                        .widthIn(max = 320.dp)
                         .fillMaxWidth()
-                        .fillMaxHeight(0.55f)
-                        .align(Alignment.BottomCenter)
-                        .background(KineticBackdrop),
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .shadow(
+                            elevation = 24.dp,
+                            shape = RoundedCornerShape(16.dp),
+                            ambientColor = Color.Black,
+                            spotColor = Color.Black.copy(alpha = 0.5f),
+                        ),
             )
-            // Gradient transition from transparent to the dark background.
+            // Gradient bleed from the artwork into the black background below.
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.25f)
-                        .align(Alignment.TopCenter)
+                        .height(80.dp)
+                        .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
                                 0f to Color.Transparent,
@@ -203,31 +204,38 @@ fun NowPlayingContentKineticPulse(
                             ),
                         ),
             )
-            Column(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(bottom = 20.dp),
-            ) {
-                PulseTrackInfo(state = state)
+        }
 
-                Spacer(modifier = Modifier.height(6.dp))
+        // 3. Bottom content — track info, controls, always on solid black.
+        // We intentionally ignore controlLayoutAlpha — Kinetic Pulse always shows controls.
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
+        ) {
+            // Push everything to the bottom with a single weight spacer.
+            Spacer(modifier = Modifier.weight(1f))
 
-                PulseInlineLyric(state = state, actions = actions)
+            PulseTrackInfo(state = state)
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-                PulseWaveformSeekbarSection(state = state, actions = actions)
+            PulseInlineLyric(state = state, actions = actions)
 
-                Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                PulseControlsRow(state = state, actions = actions)
+            PulseWaveformSeekbarSection(state = state, actions = actions)
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                PulseBottomActionsRow(state = state, actions = actions)
-            }
+            PulseControlsRow(state = state, actions = actions)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            PulseBottomActionsRow(state = state, actions = actions)
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -301,13 +309,14 @@ private fun PulseTopBar(
 private fun PulseArtworkPager(
     state: NowPlayingContentState,
     actions: NowPlayingContentActions,
+    modifier: Modifier = Modifier,
 ) {
     val isRepeatOne = state.controllerState.repeatState is RepeatState.One
     val noIndication = remember { MutableInteractionSource() }
 
     HorizontalPager(
         state = state.artworkPagerState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         beyondViewportPageCount = 1,
         userScrollEnabled = !isRepeatOne && state.artworkQueue.isNotEmpty(),
         key = { idx ->
@@ -486,7 +495,13 @@ private fun PulseWaveformSeekbarSection(
     actions: NowPlayingContentActions,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val progressFraction = (state.sliderValue / 100f).coerceIn(0f, 1f)
+    val rawFraction = (state.sliderValue / 100f).coerceIn(0f, 1f)
+    // Animate the fraction so the waveform bars slide smoothly instead of jumping.
+    val progressFraction by animateFloatAsState(
+        targetValue = rawFraction,
+        animationSpec = tween(durationMillis = 120, easing = LinearEasing),
+        label = "waveformProgress",
+    )
     val seekEnabled = state.timelineState.total > 0L && !state.timelineState.loading
 
     Column(
