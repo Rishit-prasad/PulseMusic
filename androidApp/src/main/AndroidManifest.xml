@@ -208,7 +208,7 @@
 
         <meta-data
             android:name="androidx.car.app.TintableAttributionIcon"
-            android:resource="@drawable/monochrome" />
+            android:resource="@drawable/ic_launcher_foreground_pulse" />
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
