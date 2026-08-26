@@ -424,7 +424,7 @@ interface DataStoreManager {
 
     suspend fun setCustomThemeColor(argbHex: String)
 
-    /** One of [NOW_PLAYING_STYLE_SPOTIFY], [NOW_PLAYING_STYLE_M3_EXPRESSIVE], [NOW_PLAYING_STYLE_APPLE_MUSIC]. */
+    /** One of [NOW_PLAYING_STYLE_KINETIC_PULSE], [NOW_PLAYING_STYLE_SPOTIFY], [NOW_PLAYING_STYLE_M3_EXPRESSIVE], [NOW_PLAYING_STYLE_APPLE_MUSIC]. */
     val nowPlayingStyle: Flow<String>
 
     suspend fun setNowPlayingStyle(style: String)
@@ -523,6 +523,7 @@ interface DataStoreManager {
         const val DEFAULT_THEME_COLOR_HEX = "FF8ECAE6"
 
         const val NOW_PLAYING_STYLE_SPOTIFY = "SPOTIFY"
+        const val NOW_PLAYING_STYLE_KINETIC_PULSE = "KINETIC_PULSE"
         const val NOW_PLAYING_STYLE_M3_EXPRESSIVE = "M3_EXPRESSIVE"
         const val NOW_PLAYING_STYLE_APPLE_MUSIC = "APPLE_MUSIC"
 

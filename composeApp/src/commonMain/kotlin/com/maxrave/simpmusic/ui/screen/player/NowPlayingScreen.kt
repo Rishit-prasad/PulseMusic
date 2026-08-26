@@ -60,6 +60,7 @@ import com.maxrave.simpmusic.ui.navigation.destination.list.ArtistDestination
 import com.maxrave.simpmusic.ui.navigation.destination.player.FullscreenDestination
 import com.maxrave.simpmusic.ui.screen.player.content.NowPlayingContentActions
 import com.maxrave.simpmusic.ui.screen.player.content.NowPlayingContentAppleMusic
+import com.maxrave.simpmusic.ui.screen.player.content.NowPlayingContentKineticPulse
 import com.maxrave.simpmusic.ui.screen.player.content.NowPlayingContentM3Expressive
 import com.maxrave.simpmusic.ui.screen.player.content.NowPlayingContentSpotify
 import com.maxrave.simpmusic.ui.screen.player.content.NowPlayingContentState
@@ -159,7 +160,7 @@ fun NowPlayingScreenContent(
     // Which Now Playing style renders the content layer (Settings → Now Playing style).
     val nowPlayingStyle by sharedViewModel
         .getNowPlayingStyle()
-        .collectAsStateWithLifecycle(initialValue = DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY)
+        .collectAsStateWithLifecycle(initialValue = DataStoreManager.NOW_PLAYING_STYLE_KINETIC_PULSE)
 
     // Artwork Pager state — Spotify-style horizontal swipe between queue tracks.
     // The pager wraps the Canvas + Thumbnail layers. Controller layout below stays fixed.
@@ -681,6 +682,12 @@ fun NowPlayingScreenContent(
             },
         )
     when (nowPlayingStyle) {
+        DataStoreManager.NOW_PLAYING_STYLE_KINETIC_PULSE ->
+            NowPlayingContentKineticPulse(
+                state = state,
+                actions = actions,
+            )
+
         DataStoreManager.NOW_PLAYING_STYLE_M3_EXPRESSIVE ->
             NowPlayingContentM3Expressive(
                 state = state,
@@ -693,6 +700,7 @@ fun NowPlayingScreenContent(
                 actions = actions,
             )
 
+        // SPOTIFY and any unknown/legacy stored value keep rendering Classic.
         else ->
             NowPlayingContentSpotify(
                 state = state,

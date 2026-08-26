@@ -836,7 +836,7 @@ internal class DataStoreManagerImpl(
 
     override val nowPlayingStyle =
         settingsDataStore.data.map { preferences ->
-            preferences[NOW_PLAYING_STYLE] ?: DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY
+            preferences[NOW_PLAYING_STYLE] ?: DataStoreManager.NOW_PLAYING_STYLE_KINETIC_PULSE
         }
 
     override suspend fun setNowPlayingStyle(style: String) {
