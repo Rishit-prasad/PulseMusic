@@ -64,7 +64,9 @@ kotlin {
     }
 
     sourceSets {
-        val jvmMain by getting {
+        // Direct accessor (Kotlin 2.0.20+); `val x by getting { }` is deprecated
+        // and scheduled for removal in Gradle 10.
+        jvmMain {
             dependencies {
                 // Shared KMP library — pulls App.kt, expect/actual impls,
                 // view-models, MiniPlayer state object, etc.

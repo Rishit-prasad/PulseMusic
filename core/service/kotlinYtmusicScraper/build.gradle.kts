@@ -13,6 +13,8 @@ plugins {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
+        // Parser models use @JsonNames and Json{ explicitNulls = false } (ExperimentalSerializationApi).
+        freeCompilerArgs.add("-opt-in=kotlinx.serialization.ExperimentalSerializationApi")
     }
     // Target declarations - add or remove as needed below. These define
     // which platforms this KMP module supports.

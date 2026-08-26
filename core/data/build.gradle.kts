@@ -24,6 +24,8 @@ kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xmulti-dollar-interpolation")
         freeCompilerArgs.add("-Xwhen-guards")
+        // Converters & service handlers build Json{ explicitNulls = false } (ExperimentalSerializationApi).
+        freeCompilerArgs.add("-opt-in=kotlinx.serialization.ExperimentalSerializationApi")
     }
     // Target declarations - add or remove as needed below. These define
     // which platforms this KMP module supports.

@@ -8,6 +8,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        // KizzyRPC builds Json{ explicitNulls = false } (ExperimentalSerializationApi).
+        freeCompilerArgs.add("-opt-in=kotlinx.serialization.ExperimentalSerializationApi")
+    }
     android {
         namespace = "com.my.kizzy"
         compileSdk = 37
