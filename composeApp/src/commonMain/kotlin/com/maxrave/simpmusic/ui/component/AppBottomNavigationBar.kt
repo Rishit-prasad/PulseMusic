@@ -126,7 +126,7 @@ fun AppBottomNavigationBar(
     val capsuleBorder = Color.White.copy(alpha = 0.08f)
     val indicatorGlow = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
     val activeColor = MaterialTheme.colorScheme.primary
-    val inactiveColor = Color.White.copy(alpha = 0.45f)
+    val inactiveColor = Color.White.copy(alpha = 0.55f)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -180,9 +180,9 @@ fun AppBottomNavigationBar(
                         val selected = selectedIndex == screen.ordinal
                         val contentColor =
                             if (selected) {
-                                MaterialTheme.colorScheme.primary
+                                Color.White
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                inactiveColor
                             }
                         Column(
                             modifier =
