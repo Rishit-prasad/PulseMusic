@@ -41,11 +41,8 @@ This project is a derivative of [SimpMusic](https://github.com/maxrave-dev/SimpM
 Requirements: **JDK 17+**, Android Studio (for Android builds).
 
 ```bash
-# Clone with the `core` submodule (required — the whole core layer lives there)
-git clone --recurse-submodules https://github.com/Rishit-prasad/PulseMusic.git
-
-# Already cloned without submodules?
-git submodule update --init --recursive
+# Clone
+git clone https://github.com/Rishit-prasad/PulseMusic.git
 
 # Android debug APK
 ./gradlew :androidApp:assembleDebug
