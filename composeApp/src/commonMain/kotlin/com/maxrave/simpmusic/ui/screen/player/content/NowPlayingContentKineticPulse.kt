@@ -172,6 +172,10 @@ fun NowPlayingContentKineticPulse(
 
         // 3. Bottom content — track info + inline lyric + controls, always at screen bottom.
         // A vertical scrim ensures text is readable over any artwork.
+        // NOTE: we intentionally ignore controlLayoutAlpha here — Kinetic Pulse always shows
+        // its controls. The shell's canvas auto-hide timer is meant for Spotify/Classic where
+        // controls overlay a small artwork; in our full-bleed design the scrim already handles
+        // contrast, so hiding controls just leaves an empty screen.
         Box(
             modifier =
                 Modifier
@@ -182,8 +186,8 @@ fun NowPlayingContentKineticPulse(
                             brush =
                                 Brush.verticalGradient(
                                     0f to Color.Transparent,
-                                    0.30f to Color.Black.copy(alpha = 0.45f),
-                                    0.65f to Color.Black.copy(alpha = 0.82f),
+                                    0.25f to Color.Black.copy(alpha = 0.55f),
+                                    0.50f to Color.Black.copy(alpha = 0.82f),
                                     1f to Color.Black.copy(alpha = 0.97f),
                                 ),
                         )
@@ -194,7 +198,6 @@ fun NowPlayingContentKineticPulse(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .alpha(state.controlLayoutAlpha)
                         .padding(bottom = 20.dp),
             ) {
                 PulseTrackInfo(state = state)
