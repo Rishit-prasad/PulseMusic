@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -151,45 +150,71 @@ fun NowPlayingContentKineticPulse(
                     )
                 },
     ) {
-        Column(
+        // The artwork fills the full screen behind everything else, matching Apple Music's
+        // Z-stack approach. The controls and track info are anchored to the bottom via
+        // Alignment.BottomCenter, so they can NEVER be pushed off-screen regardless of
+        // phone height or safe insets.
+
+        // 1. Artwork layer — full-screen pager with rounded corners on the image itself.
+        Box(modifier = Modifier.fillMaxSize()) {
+            PulseArtworkPager(state = state, actions = actions)
+        }
+
+        // 2. Top bar — anchored at the top.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
+        ) {
+            PulseTopBar(state = state, actions = actions)
+        }
+
+        // 3. Bottom content — track info + inline lyric + controls, always at screen bottom.
+        // A vertical scrim ensures text is readable over any artwork.
+        Box(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .widthIn(max = 560.dp)
-                    .align(Alignment.Center),
+                    .drawBehind {
+                        drawRect(
+                            brush =
+                                Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    0.30f to Color.Black.copy(alpha = 0.45f),
+                                    0.65f to Color.Black.copy(alpha = 0.82f),
+                                    1f to Color.Black.copy(alpha = 0.97f),
+                                ),
+                        )
+                    },
         ) {
-            PulseTopBar(state = state, actions = actions)
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .alpha(state.controlLayoutAlpha)
+                        .padding(bottom = 20.dp),
+            ) {
+                PulseTrackInfo(state = state)
 
-            Spacer(modifier = Modifier.weight(0.55f))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            PulseArtworkPager(state = state, actions = actions)
+                PulseInlineLyric(state = state, actions = actions)
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            PulseTrackInfo(state = state)
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            PulseInlineLyric(state = state, actions = actions)
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Controls fade out together while a canvas takes over the screen — the shell's
-            // shared alpha drives the same choreography the other styles follow.
-            Column(modifier = Modifier.alpha(state.controlLayoutAlpha)) {
                 PulseWaveformSeekbarSection(state = state, actions = actions)
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 PulseControlsRow(state = state, actions = actions)
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 PulseBottomActionsRow(state = state, actions = actions)
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -269,11 +294,7 @@ private fun PulseArtworkPager(
 
     HorizontalPager(
         state = state.artworkPagerState,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 28.dp)
-                .aspectRatio(1f),
+        modifier = Modifier.fillMaxSize(),
         beyondViewportPageCount = 1,
         userScrollEnabled = !isRepeatOne && state.artworkQueue.isNotEmpty(),
         key = { idx ->
@@ -309,10 +330,7 @@ private fun PulseArtworkPager(
                         state.screenData.canvasData?.url?.let { url ->
                             MediaPlayerView(
                                 url = url,
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(28.dp)),
+                                modifier = Modifier.fillMaxSize(),
                             )
                         }
                     } else {
@@ -329,10 +347,7 @@ private fun PulseArtworkPager(
                             error = rememberHolderPainter(),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(28.dp)),
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }
@@ -351,15 +366,7 @@ private fun PulseArtworkPager(
                     error = rememberHolderPainter(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .shadow(
-                                elevation = 36.dp,
-                                shape = RoundedCornerShape(28.dp),
-                                ambientColor = Color.Black,
-                                spotColor = Color.Black.copy(alpha = 0.55f),
-                            ).clip(RoundedCornerShape(28.dp)),
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
