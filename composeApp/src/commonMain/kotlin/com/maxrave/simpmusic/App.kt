@@ -79,6 +79,8 @@ import com.maxrave.simpmusic.ui.navigation.destination.home.NotificationDestinat
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import com.maxrave.simpmusic.ui.navigation.destination.list.AlbumDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.ArtistDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.PlaylistDestination
@@ -549,7 +551,42 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                         } else {
                                             Modifier
                                         },
-                                    ).hazeSource(hazeState),
+                                    ).hazeSource(hazeState)
+                                    .pointerInput(Unit) {
+                                        detectHorizontalDragGestures(
+                                            onDragEnd = {},
+                                            onDragCancel = {},
+                                        ) { _, dragAmount ->
+                                            if (kotlin.math.abs(dragAmount) > 30f) {
+                                                val currentDest = navBackStackEntry?.destination
+                                                val tabs = buildList {
+                                                    add(HomeDestination)
+                                                    if (showMixForYouTab) add(MixForYouDestination)
+                                                    if (showAnalyticsTab) add(AnalyticsDestination)
+                                                    add(LibraryDestination)
+                                                }
+                                                val currentIndex = tabs.indexOfFirst { dest ->
+                                                    currentDest?.hierarchy?.any { it.hasRoute(dest::class) } == true
+                                                }
+                                                if (currentIndex >= 0) {
+                                                    val nextIndex = if (dragAmount < 0) {
+                                                        (currentIndex + 1).coerceAtMost(tabs.lastIndex)
+                                                    } else {
+                                                        (currentIndex - 1).coerceAtLeast(0)
+                                                    }
+                                                    if (nextIndex != currentIndex) {
+                                                        navController.navigate(tabs[nextIndex]) {
+                                                            popUpTo(navController.graph.startDestinationId) {
+                                                                saveState = true
+                                                            }
+                                                            launchSingleTop = true
+                                                            restoreState = true
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
                             ) {
                                 AppNavigationGraph(
                                     innerPadding = innerPadding,
