@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -22,10 +21,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -51,9 +50,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -180,19 +177,32 @@ fun NowPlayingContentKineticPulse(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .drawBehind {
-                        drawRect(
-                            brush =
-                                Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    0.25f to Color.Black.copy(alpha = 0.55f),
-                                    0.50f to Color.Black.copy(alpha = 0.82f),
-                                    1f to Color.Black.copy(alpha = 0.97f),
-                                ),
-                        )
-                    },
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
+            // Solid dark background behind the entire bottom half — prevents artwork
+            // from bleeding through below the controls.
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.55f)
+                        .align(Alignment.BottomCenter)
+                        .background(KineticBackdrop),
+            )
+            // Gradient transition from transparent to the dark background.
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.25f)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                1f to KineticBackdrop,
+                            ),
+                        ),
+            )
             Column(
                 modifier =
                     Modifier
@@ -522,6 +532,10 @@ private fun PulseWaveformSeekbarSection(
 /**
  * The signature control: a bar-waveform whose filled portion tracks playback.
  *
+ * Uses Row + Box with weight(1f) instead of Canvas because Canvas has no intrinsic size
+ * and silently renders at 0×0 inside Column rows. Each bar is a separate composable that
+ * gets guaranteed width from weight distribution.
+ *
  * Interaction maps onto the shell's slider contract exactly like the M3 Slider does elsewhere:
  * live drags call [onSeekFraction] (which lands in `onSliderChange`, flipping the shell into
  * sliding mode), release calls [onSeekCommit] (`onSliderChangeFinished` performs the seek).
@@ -540,6 +554,7 @@ private fun PulseWaveformSeekbar(
     var dragFraction by remember { mutableStateOf<Float?>(null) }
     val shownFraction = dragFraction ?: progressFraction
     val amplitudes = remember(seed) { generatePulseAmplitudes(seed, WAVEFORM_BAR_COUNT) }
+    val boundary = (shownFraction.coerceIn(0f, 1f) * WAVEFORM_BAR_COUNT)
 
     val gestureModifier =
         if (enabled) {
@@ -573,55 +588,28 @@ private fun PulseWaveformSeekbar(
             Modifier
         }
 
-    Canvas(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier
-                .heightIn(min = 44.dp)
+                .height(44.dp)
                 .then(gestureModifier),
     ) {
-        val barHeightMax = size.height * 0.72f
-        val barHeightMin = size.height * 0.14f
-        val gap = 3.dp.toPx()
-        val barWidth = (size.width - gap * (WAVEFORM_BAR_COUNT - 1)) / WAVEFORM_BAR_COUNT
-        val midY = size.height / 2f
-        val boundary = shownFraction.coerceIn(0f, 1f) * WAVEFORM_BAR_COUNT
-
         amplitudes.forEachIndexed { index, amplitude ->
-            val barHeight = barHeightMin + (barHeightMax - barHeightMin) * amplitude
-            val x = index * (barWidth + gap)
-            val topLeft = Offset(x, midY - barHeight / 2f)
-            val fullSize = Size(barWidth, barHeight)
-            val corner = CornerRadius(barWidth / 2f)
-
-            when {
-                index + 1 <= boundary -> {
-                    // Fully played.
-                    drawRoundRect(color = playedColor, topLeft = topLeft, size = fullSize, cornerRadius = corner)
+            val barFraction = (amplitude * 0.72f + 0.14f) // height as fraction of container
+            val barColor =
+                when {
+                    index + 1 <= boundary -> playedColor
+                    index >= boundary -> unplayedColor
+                    else -> playedColor // boundary bar — mostly played
                 }
-
-                index >= boundary -> {
-                    // Fully unplayed.
-                    drawRoundRect(color = unplayedColor, topLeft = topLeft, size = fullSize, cornerRadius = corner)
-                }
-
-                else -> {
-                    // Boundary bar — split exactly at the progress point so seeking feels continuous.
-                    val splitOffset = boundary - index
-                    val splitX = x + barWidth * splitOffset
-                    drawRoundRect(
-                        color = playedColor,
-                        topLeft = topLeft,
-                        size = Size(barWidth * splitOffset, barHeight),
-                        cornerRadius = corner,
-                    )
-                    drawRoundRect(
-                        color = unplayedColor,
-                        topLeft = Offset(splitX, midY - barHeight / 2f),
-                        size = Size(barWidth * (1f - splitOffset), barHeight),
-                        cornerRadius = corner,
-                    )
-                }
-            }
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(barFraction)
+                        .background(barColor, RoundedCornerShape(50)),
+            )
         }
     }
 }
